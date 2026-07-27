@@ -2,7 +2,7 @@
 
 # 🎮 Games Library Card — Sensors
 
-**The Home Assistant sensors that feed the [Jellyfin Media Card](https://github.com/a4happy20/jellyfin-media-card) with your PC game library.**
+**The Home Assistant sensors that feed the [Media Display Card](https://github.com/a4happy20/media-display-card) with your PC game library.**
 
 They pull your installed **Steam** games and your **RetroArch** playlists off your PC, let you hand-add
 **emulator / external** games, tag each item by library, and expose it all as one tidy, card-ready
@@ -11,7 +11,7 @@ template sensor.
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Package-41BDF5?logo=homeassistant&logoColor=white)](https://www.home-assistant.io/docs/configuration/packages/)
 [![HASS.Agent](https://img.shields.io/badge/HASS.Agent-Commands-3949AB)](https://github.com/hass-agent/HASS.Agent)
-[![Jellyfin Media Card](https://img.shields.io/badge/Jellyfin%20Media%20Card-Renders%20this-00A4DC)](https://github.com/a4happy20/jellyfin-media-card)
+[![Media Display Card](https://img.shields.io/badge/Media%20Display%20Card-Renders%20this-00A4DC)](https://github.com/a4happy20/media-display-card)
 
 </div>
 
@@ -78,7 +78,7 @@ flowchart LR
     B -->|/local URL| C["📡 REST sensors"]
     E["✍️ External Games<br/>hand-edited catalog"] --> D
     C --> D["🧩 Template sensor<br/>merge · tag · art"]
-    D --> F["🖼️ Jellyfin Media Card"]
+    D --> F["🖼️ Media Display Card"]
 ```
 
 - **PowerShell scripts** (on your PC) do the scanning. `Get-SteamGames.ps1` reads your installed Steam
@@ -106,7 +106,7 @@ Once you understand these pieces, the setup steps below map cleanly onto them.
 - **A way for the PC to write files into Home Assistant's `config/www` folder** — the scripts save
   `steam_games.json`, `retroarch_games.json`, and the copied RetroArch thumbnails there, and HA serves
   them at `/local/...`. See the callout below.
-- *(Optional but expected)* the [Jellyfin Media Card](https://github.com/a4happy20/jellyfin-media-card)
+- *(Optional but expected)* the [Media Display Card](https://github.com/a4happy20/media-display-card)
   installed, so there's something to render the data.
 
 > [!IMPORTANT]
@@ -388,12 +388,12 @@ is working with.
 Once `sensor.steam_card_data` exists, add it to a card on your dashboard:
 
 ```yaml
-type: custom:jellyfin-media-card
+type: custom:media-display-card
 entity: sensor.steam_card_data
 ```
 
 Every card option is documented in the
-[Jellyfin Media Card README](https://github.com/a4happy20/jellyfin-media-card).
+[Media Display Card README](https://github.com/a4happy20/media-display-card).
 
 > [!NOTE]
 > This card renders your library. Wiring up **tap-to-launch** for Steam / RetroArch / emulator games is
