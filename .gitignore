@@ -1,0 +1,9 @@
+# NEVER commit real secrets — only the .example file belongs in the repo
+secrets.yaml
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

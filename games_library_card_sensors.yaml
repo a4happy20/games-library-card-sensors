@@ -1,0 +1,206 @@
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+#------------------------------------------------------SCRIPT---------------------------------------------------------------------------------------------------------------------------------------------------------------#
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+script:
+  get_steam_games_list:
+    alias: "Get Steam Games List"
+    sequence:
+    # Runs Get-SteamGames.ps1 on the PC via a HASS.Agent command.
+    # continue_on_error so a not-yet-created button doesn't abort the refresh.
+    - service: button.press
+      continue_on_error: true
+      target:
+        entity_id: button.a4happy20_steam_list_games
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.steam_games_list
+
+  get_retroarch_games_list:
+    alias: "Get RetroArch Games List"
+    sequence:
+    # Runs Get-RetroArchGames.ps1 on the PC via a HASS.Agent command.
+    # continue_on_error so a not-yet-created button doesn't abort the refresh.
+    - service: button.press
+      continue_on_error: true
+      target:
+        entity_id: button.a4happy20_retroarch_list_games
+    - service: homeassistant.update_entity
+      target:
+        entity_id: sensor.retroarch_games_list
+
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+#------------------------------------------------------SENSORS--------------------------------------------------------------------------------------------------------------------------------------------------------------#
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+sensor:
+  # Individual Steam games, generated from installed games by Get-SteamGames.ps1.
+  # Requires a `steam_games_list` entry in secrets.yaml, e.g.:
+  #   retroarch_games_list: http://hass-ip:8123/local/steam_games/steam_games.json
+  - platform: rest
+    name: Steam Games List
+    resource: !secret steam_games_list
+    scan_interval: 86400
+    json_attributes:
+      - name
+      - appid
+      - overview
+      - art
+    value_template: "{{ value_json.name[0] if value_json.name else 'empty' }}"
+
+  # Individual RetroArch games, generated from playlists by Get-RetroarchGames.ps1.
+  # Requires a `retroarch_games_list` entry in secrets.yaml, e.g.:
+  #   retroarch_games_list: http://hass-ip:8123/local/steam_games/retroarch_games.json
+  - platform: rest
+    name: RetroArch Games List
+    resource: !secret retroarch_games_list
+    scan_interval: 86400
+    json_attributes:
+      - retroarch
+      - label
+      - rom
+      - core
+      - system
+      - art
+    value_template: "{{ value_json.label[0] if value_json.label else 'empty' }}"
+
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+#------------------------------------------------------TEMPLATE SENSORS-----------------------------------------------------------------------------------------------------------------------------------------------------#
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+template:
+  # Individual games/programs.
+  - sensor:
+      - name: "External Games"
+        unique_id: external_games
+        state: "{{ (this.attributes.catalog | default({}, true)) | length }}"
+        attributes:
+          catalog: >
+            {{
+              {
+                "The Legend of Zelda: Tears of the Kingdom": {
+                  "exe": "C:/Users/a4happy20/AppData/Local/yuzu/yuzu-windows-msvc-early-access/yuzu.exe",
+                  "workdir": "C:/Users/a4happy20/AppData/Local/yuzu/yuzu-windows-msvc-early-access",
+                  "args": '-f -g "F:/Games/Yuzu Games/TOTK/The Legend of Zelda Tears of the Kingdom [0100F2C0115B6000][v0][US](nsw2u.com).xci"'
+                },
+                "The Legend of Zelda: Breath of the Wild": {
+                  "exe": "C:/Games/CEMU - Breath of the Wild/cemu/Cemu.exe",
+                  "workdir": "C:/Games/CEMU - Breath of the Wild/cemu",
+                  "args": '-f -g "C:/Games/CEMU - Breath of the Wild/cemu/games/BOTW_EUR/code/U-King.rpx"',
+                  "pre_launch": ["D:/Programs/DS4Windows/DS4Windows.exe"]
+                },
+                "RetroArch": {
+                  "exe": "F:/Games/RetroArch/retroarch.exe",
+                  "workdir": "F:/Games/RetroArch",
+                  "args": ""
+                }
+              }
+            }}
+
+
+  - trigger:
+      - trigger: state
+        entity_id:
+          - sensor.steam_games_list
+          - sensor.external_games
+          - sensor.retroarch_games_list
+      - trigger: homeassistant
+        event: start
+    sensor:
+      - name: "Steam Card Data"
+        unique_id: steam_card_data
+        state: "{{ (this.attributes.episodes | default([]) if this is defined else []) | length }}"
+        attributes:
+          episodes: >
+            {% set legacy   = 'https://cdn.cloudflare.steamstatic.com/steam/apps/' %}
+            {% set libretro = 'https://thumbnails.libretro.com/' %}
+
+            {# ---------- FALLBACK ICON (shown when no art resolves) ---------- #}
+            {% set fallback_poster = '/local/steam_games/steam_icon.png' %}
+            {% set fallback_wide   = '/local/steam_games/steam_icon.png' %}
+
+            {# ---------- CUSTOM ARTWORK (edit me) — key = EXACT game name. ----------
+               Wins over every auto source. Files in config/www are served at /local/... ,
+               or use any URL the browser can reach. #}
+            {% set custom_art = {
+                 'The Legend of Zelda: Tears of the Kingdom': {'poster': '/local/steam_games/totk_poster.png', 'wide': '/local/steam_games/totk_wide.png'},
+                 'The Legend of Zelda: Breath of the Wild':   {'poster': '/local/steam_games/botw_poster.png', 'wide': '/local/steam_games/botw_wide.png'}
+            } %}
+
+            {# names to skip (e.g. the bare RetroArch launcher entry in your catalog) #}
+            {% set exclude = ['RetroArch'] %}
+
+            {% set ns = namespace(rows=[], seen=[]) %}
+
+            {# ===== 1) STEAM ===== #}
+            {% set names    = state_attr('sensor.steam_games_list','name')     | default([], true) %}
+            {% set appids   = state_attr('sensor.steam_games_list','appid')    | default([], true) %}
+            {% set art      = state_attr('sensor.steam_games_list','art')      | default([], true) %}
+            {% set overview = state_attr('sensor.steam_games_list','overview') | default([], true) %}
+            {% for i in range(names | length) %}
+              {% set name = names[i] %}
+              {% if name and name not in ns.seen and name not in exclude %}
+                {% set appid = appids[i] | string %}
+                {% set a = art[i] if (art | length > i and art[i]) else {} %}
+                {% set s_poster = a.capsule if (a.capsule is defined and a.capsule) else legacy ~ appid ~ '/library_600x900.jpg' %}
+                {% set s_wide   = a.header  if (a.header  is defined and a.header)  else legacy ~ appid ~ '/header.jpg' %}
+                {% set ov = overview[i] if (overview | length > i and overview[i]) else '' %}
+                {% set cust = custom_art.get(name) or {} %}
+                {% set ns.rows = ns.rows + [{
+                  'id': name, 'series': name, 'season': 0, 'episode': 0, 'title': '',
+                  'overview': ov, 'library': 'steam', 'added': '',
+                  'series_art':  (cust.poster | default('')) or s_poster or fallback_poster,
+                  'episode_art': (cust.wide   | default('')) or s_wide   or fallback_wide
+                }] %}
+                {% set ns.seen = ns.seen + [name] %}
+              {% endif %}
+            {% endfor %}
+
+            {# ===== 2) EMULATOR / EXTERNAL ===== #}
+            {% for name, meta in (state_attr('sensor.external_games','catalog') or {}).items() %}
+              {% if name and name not in ns.seen and name not in exclude %}
+                {% set cust = custom_art[name] if name in custom_art else {} %}
+                {% set ns.rows = ns.rows + [{
+                  'id': name, 'series': name, 'season': 0, 'episode': 0, 'title': '',
+                  'overview': '', 'library': 'emulator', 'added': '',
+                  'series_art':  (cust.poster | default('')) or fallback_poster,
+                  'episode_art': (cust.wide   | default('')) or fallback_wide
+                }] %}
+                {% set ns.seen = ns.seen + [name] %}
+              {% endif %}
+            {% endfor %}
+
+            {# ===== 3) RETROARCH ===== #}
+            {% set rlabels  = state_attr('sensor.retroarch_games_list','label') | default([], true) %}
+            {% set rart     = state_attr('sensor.retroarch_games_list','art')   | default([], true) %}
+            {% set overview = state_attr('sensor.retroarch_games_list', 'core') | default([], true)
+              | map('replace', '\\', '/') 
+              | map('regex_replace', '.*/', '') 
+              | list %}
+
+            {% for i in range(rlabels | length) %}
+              {% set name = rlabels[i] %}
+              {% if name and name not in ns.seen and name not in exclude %}
+                {% set cust = custom_art.get(name) or {} %}
+                {% set a = rart[i] if (rart | length > i and rart[i]) else {} %}
+                {% set ov = overview[i] if (overview | length > i and overview[i]) else '' %}
+                {% set r_poster = a.capsule if (a.capsule is defined and a.capsule) else '' %}
+                {% set r_wide   = a.header  if (a.header  is defined and a.header)  else '' %}
+                {% set r_wide_alt   = a.title  if (a.title  is defined and a.title)  else '' %}
+                {% set ns.rows = ns.rows + [{
+                  'id': name, 'series': name, 'season': 0, 'episode': 0, 'title': '',
+                  'overview': ov, 'library': 'retroarch', 'added': '',
+                  'series_art':  (cust.poster | default('')) or r_poster or fallback_poster,
+                  'episode_art': (cust.wide   | default('')) or r_wide_alt   or fallback_wide
+                }] %}
+                {% set ns.seen = ns.seen + [name] %}
+              {% endif %}
+            {% endfor %}
+
+            {% if ns.rows | length == 0 %}
+              {{ this.attributes.episodes | default([]) if this is defined else [] }}
+            {% else %}
+              {{ ns.rows | sort(attribute='series') }}
+            {% endif %}
