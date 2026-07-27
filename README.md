@@ -13,6 +13,8 @@ template sensor.
 [![HASS.Agent](https://img.shields.io/badge/HASS.Agent-Commands-3949AB)](https://github.com/hass-agent/HASS.Agent)
 [![Media Display Card](https://img.shields.io/badge/Media%20Display%20Card-Renders%20this-00A4DC)](https://github.com/a4happy20/media-display-card)
 
+<img src="https://raw.githubusercontent.com/a4happy20/media-display-card/main/images/header_grid.png" width="1280" alt="HeaderGrid">
+
 </div>
 
 ---
