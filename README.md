@@ -221,7 +221,7 @@ Copy `Get-SteamGames.ps1` and `Get-RetroarchGames.ps1` onto your gaming PC. Each
 
 <br>
 
-### Step 3 — Adjust the automation for your setup
+### Step 3 — Adjust the automation that triggers the creation of the lists
 
 The automation runs the package's two `script:` entries that create the JSON lists.
 Adjust for your setup(by adding/renaming or removing):
