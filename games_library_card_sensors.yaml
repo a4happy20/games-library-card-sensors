@@ -204,3 +204,28 @@ template:
             {% else %}
               {{ ns.rows | sort(attribute='series') }}
             {% endif %}
+
+
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+#------------------------------------------------------AUTOMATIONS----------------------------------------------------------------------------------------------------------------------------------------------------------#
+#---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+
+automation:
+
+- id: "games_list_create"
+  alias: "Games List Create"
+  description: The Automation That Runs the scripts that run the hass.agent PowerShell Commands to Create the Local JSON List for the sensors to use.
+
+  triggers:
+    - trigger: homeassistant
+      event: start
+
+    - trigger: state
+      entity_id: switch.my_computer
+      from: "off"
+      to: "on"
+
+  action:
+    - delay: { seconds: 30 }
+    - service: script.get_steam_games_list
+    - service: script.get_retroarch_games_list
