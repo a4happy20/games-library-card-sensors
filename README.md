@@ -40,12 +40,13 @@ template sensor.
   - [Step 0 — Enable packages *(optional)*](#step-0--enable-packages-optional)
   - [Step 1 — Add the package file](#step-1--add-the-package-file)
   - [Step 2 — Put the scripts on your PC & set their paths](#step-2--put-the-scripts-on-your-pc--set-their-paths)
-  - [Step 3 — Wire up HASS.Agent](#step-3--wire-up-hassagent)
-  - [Step 4 — Add your secrets](#step-4--add-your-secrets)
-  - [Step 5 — Add the fallback icon & custom art *(optional)*](#step-5--add-the-fallback-icon--custom-art-optional)
-  - [Step 6 — Add your emulator / external games *(optional)*](#step-6--add-your-emulator--external-games-optional)
-  - [Step 7 — Exclude from Recorder *(optional)*](#step-7--exclude-from-recorder-optional)
-  - [Step 8 — Check config, restart & refresh](#step-8--check-config-restart--refresh)
+  - [Step 3 — Adjust the automation that triggers the creation of the lists](#step-3--adjust-the-automation-that-triggers-the-creation-of-the-lists)
+  - [Step 4 — Wire up HASS.Agent](#step-4--wire-up-hassagent)
+  - [Step 5 — Add your secrets](#step-5--add-your-secrets)
+  - [Step 6 — Add the fallback icon & custom art *(optional)*](#step-6--add-the-fallback-icon--custom-art-optional)
+  - [Step 7 — Add your emulator / external games *(optional)*](#step-7--add-your-emulator--external-games-optional)
+  - [Step 8 — Exclude from Recorder *(optional)*](#step-8--exclude-from-recorder-optional)
+  - [Step 9 — Check config, restart & refresh](#step-9--check-config-restart--refresh)
 - [The data the card receives](#the-data-the-card-receives)
 - [Using it with the card](#using-it-with-the-card)
 - [Troubleshooting](#troubleshooting)
@@ -220,7 +221,38 @@ Copy `Get-SteamGames.ps1` and `Get-RetroarchGames.ps1` onto your gaming PC. Each
 
 <br>
 
-### Step 3 — Wire up HASS.Agent
+### Step 3 — Adjust the automation for your setup
+
+The automation runs the package's two `script:` entries that create the JSON lists.
+Adjust for your setup(by adding/renaming or removing):
+
+```yaml
+# get_steam_games_list  →
+service: script.get_steam_games_list
+# get_retroarch_games_list  →
+service: script.get_retroarch_games_list
+```
+
+Adjust the triggers to your setup:
+```yaml
+triggers:
+# When home assistant starts update the sensors
+    - trigger: homeassistant
+      event: start
+
+# I like to have the sensor update when my pc turns on
+    - trigger: state
+      entity_id: switch.my_computer
+      from: "off"
+      to: "on"
+```
+
+> [!IMPORTANT]
+> If you renamed or removed the scripts while tailoring to your setup you must set here **your** scripts that create the JSON lists.
+
+<br>
+
+### Step 4 — Wire up HASS.Agent
 
 In HASS.Agent on the PC, add a **Command** for each script (a PowerShell command that runs the `.ps1`),
 and expose each as a **button** entity in Home Assistant.
@@ -245,7 +277,7 @@ button.press: button.a4happy20_retroarch_list_games
 
 <br>
 
-### Step 4 — Add your secrets
+### Step 5 — Add your secrets
 
 The two REST sensors read their JSON over HTTP. Add the URLs to `secrets.yaml`, pointing at the files
 your scripts write into `config/www`:
@@ -267,7 +299,7 @@ retroarch_games_list: http://YOUR_HA_HOST:8123/local/steam_games/retroarch_games
 
 <br>
 
-### Step 5 — Add the fallback icon & custom art *(optional)*
+### Step 6 — Add the fallback icon & custom art *(optional)*
 
 The card data sensor falls back to a placeholder image when a game has no art. Drop a
 `steam_icon.png` into `config/www/steam_games/` so it resolves at `/local/steam_games/steam_icon.png`
@@ -288,7 +320,7 @@ drops the bare `RetroArch` launcher entry).
 
 <br>
 
-### Step 6 — Add your emulator / external games *(optional)*
+### Step 7 — Add your emulator / external games *(optional)*
 
 For games that aren't in Steam or RetroArch, edit the `catalog` in the `External Games` sensor. Each
 entry is keyed by the exact game name and describes how it's launched (used by the separate launching
@@ -316,7 +348,7 @@ repo — this package just lists them):
 
 <br>
 
-### Step 7 — Exclude from Recorder *(optional)*
+### Step 8 — Exclude from Recorder *(optional)*
 
 These sensors can carry a lot of data. With big libraries, Recorder may log warnings about the volume.
 If so, exclude them:
@@ -333,7 +365,7 @@ recorder:
 
 <br>
 
-### Step 8 — Check config, restart & refresh
+### Step 9 — Check config, restart & refresh
 
 Go to **Developer Tools → YAML → Check Configuration**, fix anything it flags, then **restart Home
 Assistant**.
